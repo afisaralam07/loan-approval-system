@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block title %}Loan Result - {{ result_text }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .result-header {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .result-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.3;
+    }
+
+    .result-header.approved { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .result-header.likely { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+    .result-header.review { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .result-header.rejected { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+
+    .result-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: scaleIn 0.5s ease;
+    }
+
+    @keyframes scaleIn {
+        0% { transform: scale(0); opacity: 0; }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .result-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        position: relative;
+    }
+
+    .applicant-name {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+
+    .probability-section {
+        background: rgba(255,255,255,0.2);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-top: 2rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .probability-value {
+        font-size: 4rem;
+        font-weight: 800;
+        margin: 1rem 0;
+    }
+
+    .progress-container {
+        width: 100%;
+        height: 40px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 20px;
+        overflow: hidden;
+        margin: 1.5rem 0;
+        position: relative;
+    }
+
+    .progress-bar {
+        height: 100%;
+        border-radius: 20px;
+        transition: width 1.5s ease-in-out;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.2rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .risk-badge {
+        display: inline-block;
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: rgba(255,255,255,0.9);
+        margin-top: 1rem;
+    }
+
+    /* Details Grid */
+    .details-section {
+        padding: 2.5rem;
+    }
+
+    .section-heading {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-heading i {
+        color: var(--primary);
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--primary);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border-color: var(--primary);
+    }
+
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--gray);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--dark);
+    }
+
+    .metric-value.positive { color: var(--success); }
+    .metric-value.negative { color: var(--danger); }
+    .metric-value.warning { color: var(--warning); }
+
+    /* Application Summary */
+    .summary-box {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+
+    .summary-label {
+        color: var(--gray);
+        font-weight: 500;
+    }
+
+    .summary-value {
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    /* Recommendation Box */
+    .recommendation-box {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-left: 5px solid var(--primary);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .recommendation-box.approved { 
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        border-left-color: var(--success);
+    }
+    .recommendation-box.likely { 
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-left-color: var(--primary);
+    }
+    .recommendation-box.review { 
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-left-color: var(--warning);
+    }
+    .recommendation-box.rejected { 
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border-left-color: var(--danger);
+    }
+
+    .recommendation-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .recommendation-box.approved .recommendation-title { color: var(--success); }
+    .recommendation-box.likely .recommendation-title { color: var(--primary); }
+    .recommendation-box.review .recommendation-title { color: var(--warning); }
+    .recommendation-box.rejected .recommendation-title { color: var(--danger); }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-home {
+        background: white;
+        color: var(--dark);
+        border: 2px solid #e2e8f0;
+    }
+
+    .btn-home:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .gauge-container {
+        width: 200px;
+        height: 100px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* Comparison Chart */
+    .comparison-bar {
+        display: flex;
+        height: 40px;
+        border-radius: 20px;
+        overflow: hidden;
+        margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .comparison-segment {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .comparison-segment:hover {
+        opacity: 0.9;
+    }
+
+    .segment-approved { background: var(--success); }
+    .segment-rejected { background: var(--danger); }
+
+    @media (max-width: 768px) {
+        .result-title { font-size: 1.8rem; }
+        .probability-value { font-size: 3rem; }
+        .action-buttons { flex-direction: column; }
+        .btn { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <div class="card">
+        <!-- Result Header with Dynamic Color -->
+        <div class="result-header {{ result_status }}">
+            <div class="result-icon">
+                {% if result_status == 'approved' %}
+                    <i class="fas fa-check-circle"></i>
+                {% elif result_status == 'likely' %}
+                    <i class="fas fa-thumbs-up"></i>
+                {% elif result_status == 'review' %}
+                    <i class="fas fa-exclamation-triangle"></i>
+                {% else %}
+                    <i class="fas fa-times-circle"></i>
+                {% endif %}
+            </div>
+            
+            <div class="applicant-name">Hello, {{ applicant_name }}</div>
+            <h1 class="result-title">{{ result_text }}</h1>
+            
+            <div class="probability-section">
+                <div style="font-size: 1.1rem; opacity: 0.9;">Approval Probability</div>
+                <div class="probability-value">{{ approval_prob }}%</div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: {{ approval_prob }}%; background: {{ color }};">
+                        {{ approval_prob }}%
+                    </div>
+                </div>
+                
+                <div class="comparison-bar">
+                    <div class="comparison-segment segment-approved" style="width: {{ approval_prob }}%;">
+                        {{ approval_prob }}% Yes
+                    </div>
+                    <div class="comparison-segment segment-rejected" style="width: {{ rejection_prob }}%;">
+                        {{ rejection_prob }}% No
+                    </div>
+                </div>
+                
+                <div class="risk-badge" style="color: {{ color }};">
+                    {{ risk_level }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Section -->
+        <div class="details-section">
+            
+            <!-- Financial Metrics -->
+            <div class="section-heading">
+                <i class="fas fa-chart-pie"></i>
+                Financial Analysis
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Monthly Income</div>
+                    <div class="metric-value positive">{{ total_income }}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Estimated EMI</div>
+                    <div class="metric-value negative">{{ emi }}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Debt-to-Income Ratio</div>
+                    <div class="metric-value {% if dti_ratio > 40 %}negative{% elif dti_ratio > 30 %}warning{% else %}positive{% endif %}">
+                        {{ dti_ratio }}%
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Balance Income</div>
+                    <div class="metric-value positive">{{ balance_income }}</div>
+                </div>
+            </div>
+
+            <!-- Application Summary -->
+            <div class="section-heading">
+                <i class="fas fa-file-alt"></i>
+                Application Summary
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Loan Amount</span>
+                        <span class="summary-value">{{ loan_amount }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Loan Term</span>
+                        <span class="summary-value">{{ loan_term }} months</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Applicant Income</span>
+                        <span class="summary-value">{{ monthly_income }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Co-applicant Income</span>
+                        <span class="summary-value">{{ coapplicant_income }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Dependents</span>
+                        <span class="summary-value">{{ dependents }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Credit History</span>
+                        <span class="summary-value" style="color: {% if credit_history == 'Good' %}var(--success){% else %}var(--danger){% endif %}">
+                            {{ credit_history }}
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Property Area</span>
+                        <span class="summary-value">{{ property_area }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Education</span>
+                        <span class="summary-value">{{ education }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Employment</span>
+                        <span class="summary-value">{{ employment }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Marital Status</span>
+                        <span class="summary-value">{{ marital_status }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendation -->
+            <div class="recommendation-box {{ result_status }}">
+                <div class="recommendation-title">
+                    <i class="fas fa-lightbulb"></i>
+                    Our Recommendation
+                </div>
+                <p style="color: #374151; line-height: 1.6;">{{ recommendation }}</p>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="section-heading">
+                <i class="fas fa-arrow-right"></i>
+                Next Steps
+            </div>
+            
+            <div style="background: #f0fdf4; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+                <ul style="list-style: none; padding: 0;">
+                    <li style="padding: 0.5rem 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                        <span>Review your application details above</span>
+                    </li>
+                    <li style="padding: 0.5rem 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                        <span>Prepare necessary documents (ID proof, Income proof, Address proof)</span>
+                    </li>
+                    <li style="padding: 0.5rem 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                        <span>Visit nearest branch or apply online through official portal</span>
+                    </li>
+                    <li style="padding: 0.5rem 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                        <span>Track your application status with reference number</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{{ url_for('home') }}" class="btn btn-secondary btn-home">
+                    <i class="fas fa-arrow-left"></i>
+                    Check Another Application
+                </a>
+                <button onclick="window.print()" class="btn btn-primary">
+                    <i class="fas fa-print"></i>
+                    Print Result
+                </button>
+                <button onclick="shareResult()" class="btn btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <i class="fas fa-share-alt"></i>
+                    Share Result
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Animate progress bar on load
+    window.addEventListener('load', function() {
+        const progressBar = document.querySelector('.progress-bar');
+        const width = progressBar.style.width;
+        progressBar.style.width = '0%';
+        setTimeout(() => {
+            progressBar.style.width = width;
+        }, 100);
+    });
+
+    // Share result function
+    function shareResult() {
+        if (navigator.share) {
+            navigator.share({
+                title: 'My Loan Prediction Result',
+                text: 'I checked my loan eligibility! Approval probability: {{ approval_prob }}%',
+                url: window.location.href
+            }).catch(err => console.log('Error sharing:', err));
+        } else {
+            // Fallback - copy to clipboard
+            const text = `Loan Prediction Result for {{ applicant_name }}: {{ result_text }} ({{ approval_prob }}% probability)`;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Result copied to clipboard!');
+            });
+        }
+    }
+
+    // Confetti effect for approved loans
+    {% if result_status == 'approved' or result_status == 'likely' %}
+    function createConfetti() {
+        const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899'];
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.position = 'fixed';
+            confetti.style.width = '10px';
+            confetti.style.height = '10px';
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.top = '-10px';
+            confetti.style.borderRadius = '50%';
+            confetti.style.zIndex = '9999';
+            confetti.style.pointerEvents = 'none';
+            document.body.appendChild(confetti);
+            
+            const duration = Math.random() * 3 + 2;
+            confetti.animate([
+                { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                { transform: `translateY(${window.innerHeight}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            }).onfinish = () => confetti.remove();
+        }
+    }
+    
+    setTimeout(createConfetti, 500);
+    {% endif %}
+</script>
+{% endblock %}
